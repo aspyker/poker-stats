@@ -11,7 +11,8 @@
     
     <xsl:variable name="PSNLogfilename1">HH20100915 T311570838 No Limit Hold'em 200 + 15.txt</xsl:variable>
     <xsl:variable name="PSNLogfilename2">HH20100918 T308745085 No Limit Hold'em Freeroll.txt</xsl:variable>
-    <xsl:variable name="PSNLogfilename">HH20100918 T308745157 No Limit Hold'em Freeroll.txt</xsl:variable>
+    <xsl:variable name="PSNLogfilename3">HH20100918 T308745157 No Limit Hold'em Freeroll.txt</xsl:variable>
+    <xsl:variable name="PSNLogfilename">HH20101010 T319269255 No Limit Hold'em Freeroll.txt</xsl:variable>
     
     <xsl:variable name="filename"><xsl:value-of select="concat($PSNLogdirectory, '/', $PSNLogfilename)"/></xsl:variable>
     <xsl:output method="xml" indent="yes"/>
@@ -69,92 +70,129 @@
         <xsl:variable name="lines">
         <lines>
         <xsl:for-each select="tokenize(unparsed-text($logFilename), '\r?\n')">
-            <xsl:if test="starts-with(., 'PokerStars Game ')">
-                <hand>
-                <xsl:value-of select="."/>
-                </hand>
-            </xsl:if>
-            <xsl:if test="starts-with(., concat('Dealt to ', $PSNUsername))">
-                <hole>
-                <xsl:value-of select="."/>
-                </hole>
-            </xsl:if>
-            <xsl:if test="starts-with(., concat($PSNUsername, ': bets'))">
-                <bets>
-                <xsl:value-of select="."/>
-                </bets>
-            </xsl:if>
-            <xsl:if test="starts-with(., concat($PSNUsername, ': calls'))">
-                <calls>
-                <xsl:value-of select="."/>
-                </calls>
-            </xsl:if>
-            <xsl:if test="starts-with(., concat($PSNUsername, ': folds'))">
-                <folds>
-                <xsl:value-of select="."/>
-                </folds>
-            </xsl:if>
-            <xsl:if test="starts-with(., concat($PSNUsername, ': checks'))">
-                <checks>
-                <xsl:value-of select="."/>
-                </checks>
-            </xsl:if>
-            <xsl:if test="starts-with(., concat($PSNUsername, ': raises'))">
-                <raises>
-                <xsl:value-of select="."/>
-                </raises>
-            </xsl:if>
-            <xsl:if test="starts-with(., concat($PSNUsername, ': posts big blind'))">
-                <bigblind>
-                <xsl:value-of select="."/>
-                </bigblind>
-            </xsl:if>
-            <xsl:if test="starts-with(., concat($PSNUsername, ': posts small blind'))">
-                <smallblind>
-                <xsl:value-of select="."/>
-                </smallblind>
-            </xsl:if>
-            <xsl:if test="starts-with(., '*** FLOP ***')">
-                <flop>
-                <xsl:value-of select="."/>
-                </flop>
-            </xsl:if>
-            <xsl:if test="starts-with(., '*** TURN ***')">
-                <turn>
-                <xsl:value-of select="."/>
-                </turn>
-            </xsl:if>
-            <xsl:if test="starts-with(., '*** RIVER ***')">
-                <river>
-                <xsl:value-of select="."/>
-                </river>
-            </xsl:if>
-<!-- comes in the summary anyway            
-            <xsl:if test="starts-with(., 'Total pot ')">
-                <pot>
-                <xsl:value-of select="."/>
-                </pot>
-            </xsl:if>
--->            
-            <xsl:if test="starts-with(., 'Seat ') and (contains(., ' and won ') or contains(., ' collected '))">
-                <winner>
-                    <xsl:if test="contains(., $PSNUsername)">
-                        <xsl:attribute name="self">true</xsl:attribute>
-                    </xsl:if>
+            <xsl:choose>
+                <xsl:when test="starts-with(., 'PokerStars Game ')">
+                    <hand>
                     <xsl:value-of select="."/>
-                </winner>
-            </xsl:if>
-            <xsl:if test="starts-with(., 'Seat ') and contains (., $PSNUsername) and contains(., ' in chips')">
-                <seatSummary>
-                <xsl:value-of select="."/>
-                </seatSummary>
-            </xsl:if>
-            <xsl:if test="contains(., 'is the button')">
-                <tableSummary>
-                <xsl:value-of select="."/>
-                </tableSummary>
-            </xsl:if>
-        </xsl:for-each>
+                    </hand>
+                </xsl:when>
+                <xsl:when test="starts-with(., concat('Dealt to ', $PSNUsername))">
+                    <hole>
+                    <xsl:value-of select="."/>
+                    </hole>
+                </xsl:when>
+                <xsl:when test="contains(., ': bets ')">
+                    <bets>
+                    <xsl:value-of select="."/>
+                    </bets>
+                </xsl:when>
+                <xsl:when test="contains(., ': calls ')">
+                    <calls>
+                    <xsl:value-of select="."/>
+                    </calls>
+                </xsl:when>
+                <xsl:when test="contains(., ': folds')">
+                    <folds>
+                    <xsl:value-of select="."/>
+                    </folds>
+                </xsl:when>
+                <xsl:when test="contains(., ': mucks hand')">
+                    <mucks>
+                    <xsl:value-of select="."/>
+                    </mucks>
+                </xsl:when>
+                <xsl:when test="contains(., ': checks')">
+                    <checks>
+                    <xsl:value-of select="."/>
+                    </checks>
+                </xsl:when>
+                <xsl:when test="contains(., ': raises ')">
+                    <raises>
+                    <xsl:value-of select="."/>
+                    </raises>
+                </xsl:when>
+                <xsl:when test="contains(., ': posts big blind')">
+                    <bigblind>
+                    <xsl:value-of select="."/>
+                    </bigblind>
+                </xsl:when>
+                <xsl:when test="contains(., ': posts small blind')">
+                    <smallblind>
+                    <xsl:value-of select="."/>
+                    </smallblind>
+                </xsl:when>
+                <xsl:when test="starts-with(., '*** FLOP ***')">
+                    <flop>
+                    <xsl:value-of select="."/>
+                    </flop>
+                </xsl:when>
+                <xsl:when test="starts-with(., '*** TURN ***')">
+                    <turn>
+                    <xsl:value-of select="."/>
+                    </turn>
+                </xsl:when>
+                <xsl:when test="starts-with(., '*** RIVER ***')">
+                    <river>
+                    <xsl:value-of select="."/>
+                    </river>
+                </xsl:when>
+    <!-- comes in the summary anyway            
+                <xsl:when test="starts-with(., 'Total pot ')">
+                    <pot>
+                    <xsl:value-of select="."/>
+                    </pot>
+                </xsl:when>
+    -->            
+                <xsl:when test="starts-with(., 'Seat ') and (contains(., ' and won ') or contains(., ' collected '))">
+                    <winner>
+                        <xsl:if test="contains(., $PSNUsername)">
+                            <xsl:attribute name="self">true</xsl:attribute>
+                        </xsl:if>
+                        <!-- note that we're explicitly losing any "and won" statements from other players -->
+                        <xsl:value-of select="."/>
+                    </winner>
+                </xsl:when>
+                <xsl:when test="starts-with(., 'Seat ') and contains (., $PSNUsername) and contains(., ' in chips')">
+                    <seatSummary>
+                    <xsl:value-of select="."/>
+                    </seatSummary>
+                </xsl:when>
+                <xsl:when test="contains(., 'is the button')">
+                    <tableSummary>
+                    <xsl:value-of select="."/>
+                    </tableSummary>
+                </xsl:when>
+                <!-- Board summary  -->
+                <xsl:when test="starts-with(., 'Board [')"/>
+                <!-- so far not doing anything with other seat summaries -->
+                <xsl:when test="starts-with(., 'Seat ') and not(contains (., $PSNUsername)) and contains(., ' in chips')"/>
+                <!-- so far not doing anything lost summaries -->
+                <xsl:when test="starts-with(., 'Seat ') and contains(., ' and lost with ')"/>
+                <!-- so far not doing anything lost summaries -->
+                <xsl:when test="starts-with(., 'Seat ') and contains(., ' folded before ')"/>
+                <!-- so far not doing anything lost summaries -->
+                <xsl:when test="starts-with(., 'Seat ') and contains(., ' folded on the ')"/>
+                <!-- so far not doing anything with the antes -->
+                <xsl:when test="contains (., ': posts the ante ')"/>
+                <!-- handled in dealt to -->
+                <xsl:when test=". = '*** HOLE CARDS ***'"/> 
+                <xsl:when test=". = '*** SHOW DOWN ***'"/>
+                <xsl:when test=". = '*** SUMMARY ***'"/>
+                <xsl:when test=". = '*** SUMMARY ***'"/>
+                <xsl:when test="contains(., 'is sitting out')"/>
+                <xsl:when test="contains(., 'has returned')"/>
+                <xsl:when test="contains(., 'has timed out')"/>
+                <xsl:when test="contains(., 'is connected')"/>
+                <xsl:when test="contains(., 'said, ')"/>
+                <xsl:when test="contains(., 'doesn''t show hand')"/>
+                <xsl:when test="contains(., 'Total pot ')"/>
+                <xsl:when test="contains(., ' returned to ')"/>
+                <xsl:when test=". = ''"/>
+                <xsl:otherwise>
+                    <xsl:message><xsl:value-of select="."/></xsl:message>
+                </xsl:otherwise>
+            </xsl:choose>
+            </xsl:for-each>
         </lines>
         </xsl:variable>
         <xsl:sequence select="$lines"></xsl:sequence>
@@ -261,31 +299,155 @@
     </xsl:template>
     
     <xsl:template match="bets">
-        <xsl:copy-of select="."/>
+        <bets>
+            <xsl:analyze-string select="."
+                regex="^(.*): bets (\d*)\s*(and is all-in)?">
+                <xsl:matching-substring>
+                    <xsl:variable name="better" select="regex-group(1)"/>
+                    <xsl:variable name="ammount" select="regex-group(2)"/>
+                    <xsl:variable name="all-in" select="regex-group(3)"/>
+                    <xsl:if test="$better = $PSNUsername">
+                        <xsl:attribute name="self">true</xsl:attribute>
+                    </xsl:if>
+                    <xsl:attribute name="ammount"><xsl:value-of select="$ammount"/></xsl:attribute>
+                    <xsl:if test="$all-in">
+                        <xsl:attribute name="all-in">true</xsl:attribute>
+                    </xsl:if>
+                </xsl:matching-substring>
+                <xsl:non-matching-substring>******* ERROR *******</xsl:non-matching-substring>
+            </xsl:analyze-string>
+        </bets>
     </xsl:template>
     
     <xsl:template match="calls">
-        <xsl:copy-of select="."/>
+        <calls>
+            <xsl:analyze-string select="."
+                regex="^(.*): calls (\d*)\s*(and is all-in)?">
+                <xsl:matching-substring>
+                    <xsl:variable name="caller" select="regex-group(1)"/>
+                    <xsl:variable name="ammount" select="regex-group(2)"/>
+                    <xsl:variable name="all-in" select="regex-group(3)"/>
+                    <xsl:if test="$caller = $PSNUsername">
+                        <xsl:attribute name="self">true</xsl:attribute>
+                    </xsl:if>
+                    <xsl:attribute name="ammount"><xsl:value-of select="$ammount"/></xsl:attribute>
+                    <xsl:if test="$all-in">
+                        <xsl:attribute name="all-in">true</xsl:attribute>
+                    </xsl:if>
+                </xsl:matching-substring>
+                <xsl:non-matching-substring>******* ERROR *******</xsl:non-matching-substring>
+            </xsl:analyze-string>
+        </calls>
     </xsl:template>
     
     <xsl:template match="folds">
-        <xsl:copy-of select="."/>
+        <folds>
+            <xsl:analyze-string select="."
+                regex="^(.*): folds ">
+                <xsl:matching-substring>
+                    <xsl:variable name="person" select="regex-group(1)"/>
+                    <xsl:if test="$person = $PSNUsername">
+                        <xsl:attribute name="self">true</xsl:attribute>
+                    </xsl:if>
+                </xsl:matching-substring>
+                <xsl:non-matching-substring>******* ERROR *******</xsl:non-matching-substring>
+            </xsl:analyze-string>
+        </folds>
     </xsl:template>
     
+    <xsl:template match="mucks">
+        <mucks>
+            <xsl:analyze-string select="."
+                regex="^(.*): mucks hand ">
+                <xsl:matching-substring>
+                    <xsl:variable name="person" select="regex-group(1)"/>
+                    <xsl:if test="$person = $PSNUsername">
+                        <xsl:attribute name="self">true</xsl:attribute>
+                    </xsl:if>
+                </xsl:matching-substring>
+                <xsl:non-matching-substring>******* ERROR *******</xsl:non-matching-substring>
+            </xsl:analyze-string>
+        </mucks>
+    </xsl:template>
+
     <xsl:template match="smallblind">
-        <xsl:copy-of select="."/>
+        <smallblind>
+            <xsl:analyze-string select="."
+                regex="^(.*): posts small blind (\d*)\s*(and is all-in)?">
+                <xsl:matching-substring>
+                    <xsl:variable name="person" select="regex-group(1)"/>
+                    <xsl:variable name="ammount" select="regex-group(2)"/>
+                    <xsl:variable name="all-in" select="regex-group(3)"/>
+                    <xsl:if test="$person = $PSNUsername">
+                        <xsl:attribute name="self">true</xsl:attribute>
+                    </xsl:if>
+                    <xsl:attribute name="ammount"><xsl:value-of select="$ammount"/></xsl:attribute>
+                    <xsl:if test="$all-in">
+                        <xsl:attribute name="all-in">true</xsl:attribute>
+                    </xsl:if>
+                </xsl:matching-substring>
+                <xsl:non-matching-substring>******* ERROR *******</xsl:non-matching-substring>
+            </xsl:analyze-string>
+        </smallblind>
     </xsl:template>
     
     <xsl:template match="bigblind">
-        <xsl:copy-of select="."/>
+        <bigblind>
+            <xsl:analyze-string select="."
+                regex="^(.*): posts big blind (\d*)\s*(and is all-in)?">
+                <xsl:matching-substring>
+                    <xsl:variable name="person" select="regex-group(1)"/>
+                    <xsl:variable name="ammount" select="regex-group(2)"/>
+                    <xsl:variable name="all-in" select="regex-group(3)"/>
+                    <xsl:if test="$person = $PSNUsername">
+                        <xsl:attribute name="self">true</xsl:attribute>
+                    </xsl:if>
+                    <xsl:attribute name="ammount"><xsl:value-of select="$ammount"/></xsl:attribute>
+                    <xsl:if test="$all-in">
+                        <xsl:attribute name="all-in">true</xsl:attribute>
+                    </xsl:if>
+                </xsl:matching-substring>
+                <xsl:non-matching-substring>******* ERROR *******</xsl:non-matching-substring>
+            </xsl:analyze-string>
+        </bigblind>
     </xsl:template>
     
     <xsl:template match="checks">
-        <xsl:copy-of select="."/>
+        <checks>
+            <xsl:analyze-string select="."
+                regex="^(.*): checks ">
+                <xsl:matching-substring>
+                    <xsl:variable name="person" select="regex-group(1)"/>
+                    <xsl:if test="$person = $PSNUsername">
+                        <xsl:attribute name="self">true</xsl:attribute>
+                    </xsl:if>
+                </xsl:matching-substring>
+                <xsl:non-matching-substring>******* ERROR *******</xsl:non-matching-substring>
+            </xsl:analyze-string>
+        </checks>
     </xsl:template>
     
     <xsl:template match="raises">
-        <xsl:copy-of select="."/>
+        <raises>
+            <xsl:analyze-string select="."
+                regex="^(.*): raises (\d*) to (\d*)\s*(and is all-in)?">
+            <xsl:matching-substring>
+                <xsl:variable name="raiser" select="regex-group(1)"/>
+                <xsl:variable name="from" select="regex-group(2)"/>
+                <xsl:variable name="to" select="regex-group(3)"/>
+                <xsl:variable name="all-in" select="regex-group(4)"/>
+                    <xsl:if test="$raiser = $PSNUsername">
+                        <xsl:attribute name="self">true</xsl:attribute>
+                    </xsl:if>
+                    <xsl:attribute name="from"><xsl:value-of select="$from"/></xsl:attribute>
+                    <xsl:attribute name="to"><xsl:value-of select="$to"/></xsl:attribute>
+                    <xsl:if test="$all-in">
+                        <xsl:attribute name="all-in">true</xsl:attribute>
+                    </xsl:if>
+            </xsl:matching-substring>
+            <xsl:non-matching-substring>******* ERROR *******</xsl:non-matching-substring>
+            </xsl:analyze-string>
+        </raises>
     </xsl:template>
     
     <xsl:template match="winner">
