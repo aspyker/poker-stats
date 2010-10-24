@@ -12,7 +12,8 @@
     <xsl:variable name="PSNLogfilename1">HH20100915 T311570838 No Limit Hold'em 200 + 15.txt</xsl:variable>
     <xsl:variable name="PSNLogfilename2">HH20100918 T308745085 No Limit Hold'em Freeroll.txt</xsl:variable>
     <xsl:variable name="PSNLogfilename3">HH20100918 T308745157 No Limit Hold'em Freeroll.txt</xsl:variable>
-    <xsl:variable name="PSNLogfilename">HH20101010 T319269255 No Limit Hold'em Freeroll.txt</xsl:variable>
+    <xsl:variable name="PSNLogfilename4">HH20101010 T319269255 No Limit Hold'em Freeroll.txt</xsl:variable>
+    <xsl:variable name="PSNLogfilename">HH20101016 T321857964 No Limit Hold'em $0.25 + $0.txt</xsl:variable>
     
     <xsl:variable name="filename"><xsl:value-of select="concat($PSNLogdirectory, '/', $PSNLogfilename)"/></xsl:variable>
     <xsl:output method="xml" indent="yes"/>
