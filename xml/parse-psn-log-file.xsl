@@ -62,7 +62,7 @@
     <xsl:function name="pp:buttonPositionTableSizeAndCurrentChipCountAndTime" as="attribute()*">
         <xsl:param name="hand" as="node()"/>
         <xsl:copy-of select="pp:whichSeatIsTheButtonAndTableSize($hand/following-sibling::tableSummary[1])"/>
-        <xsl:copy-of select="pp:seatNumberAndCurrentChipcount($hand/following-sibling::seatSummary[1])"/>
+        <xsl:copy-of select="pp:seatNumberAndCurrentChipcount($hand/following-sibling::seatSummary[@self='true'][1])"/>
         <xsl:copy-of select="pp:getHandTime($hand)"/>
     </xsl:function>
 
@@ -153,8 +153,11 @@
                         <xsl:value-of select="."/>
                     </winner>
                 </xsl:when>
-                <xsl:when test="starts-with(., 'Seat ') and contains (., $PSNUsername) and contains(., ' in chips')">
+                <xsl:when test="starts-with(., 'Seat ') and contains(., ' in chips')">
                     <seatSummary>
+                        <xsl:if test="contains(., $PSNUsername)">
+                            <xsl:attribute name="self">true</xsl:attribute>
+                        </xsl:if>
                     <xsl:value-of select="."/>
                     </seatSummary>
                 </xsl:when>
@@ -166,7 +169,9 @@
                 <!-- Board summary  -->
                 <xsl:when test="starts-with(., 'Board [')"/>
                 <!-- so far not doing anything with other seat summaries -->
+                <!--
                 <xsl:when test="starts-with(., 'Seat ') and not(contains (., $PSNUsername)) and contains(., ' in chips')"/>
+                -->
                 <!-- so far not doing anything lost summaries -->
                 <xsl:when test="starts-with(., 'Seat ') and contains(., ' and lost with ')"/>
                 <!-- so far not doing anything lost summaries -->
@@ -230,8 +235,43 @@
     </xsl:template>
     
     <xsl:template match="seatSummary">
-        <!-- hand reads to this following-sibling -->
+        <xsl:variable name="firstSeatSummaryOfHand" select="current()/preceding-sibling::hand[1]/following-sibling::seatSummary[1]"/>
+        <xsl:variable name="lastSeatSummaryOfHand" select="current()/following-sibling::hand[1]/preceding-sibling::seatSummary[1]"/>
+        <xsl:variable name="isFirstSummary" select="$firstSeatSummaryOfHand is current()"/>
+        <xsl:choose>
+            <xsl:when test="$isFirstSummary">
+                <seats>
+                <xsl:for-each select="current()/preceding-sibling::hand[1]/following-sibling::seatSummary">
+                    <xsl:choose>
+                        <xsl:when test="empty($lastSeatSummaryOfHand)">
+                            <xsl:copy-of select="pp:writeSeatSummary(.)"/>
+                        </xsl:when>
+                        <xsl:when test="current() &lt;&lt; $lastSeatSummaryOfHand">
+                            <xsl:copy-of select="pp:writeSeatSummary(.)"/>
+                        </xsl:when>
+                        <xsl:otherwise/><!-- current() >> $lastSeatSummaryOfHand -->
+                    </xsl:choose>
+                </xsl:for-each>
+                </seats>
+            </xsl:when>
+        </xsl:choose>
     </xsl:template>
+    
+    <xsl:function name="pp:writeSeatSummary" as="node()">
+        <xsl:param name="seatSummaryText" as="xs:string"/>
+        <xsl:analyze-string select="$seatSummaryText"
+            regex="^Seat (\d*): (.*) \((\d*) in chips\).*">
+            <xsl:matching-substring>
+                <xsl:variable name="seatNum" select="regex-group(1)"/>
+                <xsl:variable name="player" select="regex-group(2)"/>
+                <xsl:variable name="chips" select="regex-group(3)"/>
+                <seat seatNum="{ $seatNum }" player="{ $player }" chips="{ $chips }"/>
+            </xsl:matching-substring>
+            <xsl:non-matching-substring>
+                <seat>******* ERROR *******</seat>
+            </xsl:non-matching-substring>
+        </xsl:analyze-string>
+    </xsl:function>
     
     <xsl:template match="hole">
         <hole>
@@ -300,6 +340,7 @@
     </xsl:template>
     
     <xsl:template match="bets">
+        <xsl:variable name="action" select="."/>
         <bets>
             <xsl:analyze-string select="."
                 regex="^(.*): bets (\d*)\s*(and is all-in)?">
@@ -310,6 +351,7 @@
                     <xsl:if test="$better = $PSNUsername">
                         <xsl:attribute name="self">true</xsl:attribute>
                     </xsl:if>
+                    <xsl:attribute name="seatNum" select="pp:seatNumber($better, $action)"/> 
                     <xsl:attribute name="ammount"><xsl:value-of select="$ammount"/></xsl:attribute>
                     <xsl:if test="$all-in">
                         <xsl:attribute name="all-in">true</xsl:attribute>
@@ -321,6 +363,7 @@
     </xsl:template>
     
     <xsl:template match="calls">
+        <xsl:variable name="action" select="."/>
         <calls>
             <xsl:analyze-string select="."
                 regex="^(.*): calls (\d*)\s*(and is all-in)?">
@@ -331,6 +374,7 @@
                     <xsl:if test="$caller = $PSNUsername">
                         <xsl:attribute name="self">true</xsl:attribute>
                     </xsl:if>
+                    <xsl:attribute name="seatNum" select="pp:seatNumber($caller, $action)"/> 
                     <xsl:attribute name="ammount"><xsl:value-of select="$ammount"/></xsl:attribute>
                     <xsl:if test="$all-in">
                         <xsl:attribute name="all-in">true</xsl:attribute>
@@ -342,6 +386,7 @@
     </xsl:template>
     
     <xsl:template match="folds">
+        <xsl:variable name="action" select="."/>
         <folds>
             <xsl:analyze-string select="."
                 regex="^(.*): folds ">
@@ -350,6 +395,7 @@
                     <xsl:if test="$person = $PSNUsername">
                         <xsl:attribute name="self">true</xsl:attribute>
                     </xsl:if>
+                    <xsl:attribute name="seatNum" select="pp:seatNumber($person, $action)"/> 
                 </xsl:matching-substring>
                 <xsl:non-matching-substring>******* ERROR *******</xsl:non-matching-substring>
             </xsl:analyze-string>
@@ -357,6 +403,7 @@
     </xsl:template>
     
     <xsl:template match="mucks">
+        <xsl:variable name="action" select="."/>
         <mucks>
             <xsl:analyze-string select="."
                 regex="^(.*): mucks hand ">
@@ -365,6 +412,7 @@
                     <xsl:if test="$person = $PSNUsername">
                         <xsl:attribute name="self">true</xsl:attribute>
                     </xsl:if>
+                    <xsl:attribute name="seatNum" select="pp:seatNumber($person, $action)"/> 
                 </xsl:matching-substring>
                 <xsl:non-matching-substring>******* ERROR *******</xsl:non-matching-substring>
             </xsl:analyze-string>
@@ -372,6 +420,7 @@
     </xsl:template>
 
     <xsl:template match="smallblind">
+        <xsl:variable name="action" select="."/>
         <smallblind>
             <xsl:analyze-string select="."
                 regex="^(.*): posts small blind (\d*)\s*(and is all-in)?">
@@ -382,6 +431,7 @@
                     <xsl:if test="$person = $PSNUsername">
                         <xsl:attribute name="self">true</xsl:attribute>
                     </xsl:if>
+                    <xsl:attribute name="seatNum" select="pp:seatNumber($person, $action)"/> 
                     <xsl:attribute name="ammount"><xsl:value-of select="$ammount"/></xsl:attribute>
                     <xsl:if test="$all-in">
                         <xsl:attribute name="all-in">true</xsl:attribute>
@@ -393,6 +443,7 @@
     </xsl:template>
     
     <xsl:template match="bigblind">
+        <xsl:variable name="action" select="."/>
         <bigblind>
             <xsl:analyze-string select="."
                 regex="^(.*): posts big blind (\d*)\s*(and is all-in)?">
@@ -403,6 +454,7 @@
                     <xsl:if test="$person = $PSNUsername">
                         <xsl:attribute name="self">true</xsl:attribute>
                     </xsl:if>
+                    <xsl:attribute name="seatNum" select="pp:seatNumber($person, $action)"/> 
                     <xsl:attribute name="ammount"><xsl:value-of select="$ammount"/></xsl:attribute>
                     <xsl:if test="$all-in">
                         <xsl:attribute name="all-in">true</xsl:attribute>
@@ -414,6 +466,7 @@
     </xsl:template>
     
     <xsl:template match="checks">
+        <xsl:variable name="action" select="."/>
         <checks>
             <xsl:analyze-string select="."
                 regex="^(.*): checks ">
@@ -422,6 +475,7 @@
                     <xsl:if test="$person = $PSNUsername">
                         <xsl:attribute name="self">true</xsl:attribute>
                     </xsl:if>
+                    <xsl:attribute name="seatNum" select="pp:seatNumber($person, $action)"/> 
                 </xsl:matching-substring>
                 <xsl:non-matching-substring>******* ERROR *******</xsl:non-matching-substring>
             </xsl:analyze-string>
@@ -429,6 +483,7 @@
     </xsl:template>
     
     <xsl:template match="raises">
+        <xsl:variable name="action" select="."/>
         <raises>
             <xsl:analyze-string select="."
                 regex="^(.*): raises (\d*) to (\d*)\s*(and is all-in)?">
@@ -440,7 +495,8 @@
                     <xsl:if test="$raiser = $PSNUsername">
                         <xsl:attribute name="self">true</xsl:attribute>
                     </xsl:if>
-                    <xsl:attribute name="from"><xsl:value-of select="$from"/></xsl:attribute>
+                <xsl:attribute name="seatNum" select="pp:seatNumber($raiser, $action)"/> 
+                <xsl:attribute name="from"><xsl:value-of select="$from"/></xsl:attribute>
                     <xsl:attribute name="to"><xsl:value-of select="$to"/></xsl:attribute>
                     <xsl:if test="$all-in">
                         <xsl:attribute name="all-in">true</xsl:attribute>
@@ -479,4 +535,23 @@
         </xsl:choose>
         </winner>
     </xsl:template>
+    
+    <xsl:function name="pp:seatNumber" as="xs:string">
+        <xsl:param name="player" as="xs:string"/>
+        <xsl:param name="action" as="node()"/>
+        <xsl:variable name="firstSeatSummaryOfAction" select="$action/preceding-sibling::hand[1]/following-sibling::seatSummary[1]"/>
+        <xsl:variable name="lastSeatSummaryOfActionNextNode" select="$action/preceding-sibling::seatSummary[1]/following-sibling::*[1]"/>
+        <xsl:variable name="summaries" select="$action/preceding-sibling::hand[1]/following-sibling::seatSummary[. &lt;&lt; $lastSeatSummaryOfActionNextNode]"/>
+        <xsl:variable name="rightSummary" select="$summaries[contains(., $player)][1]"/>
+        <xsl:analyze-string select="$rightSummary"
+            regex="^Seat (\d*): (.*) \((\d*) in chips\).*">
+            <xsl:matching-substring>
+                <xsl:value-of select="regex-group(1)"/>
+            </xsl:matching-substring>
+            <xsl:non-matching-substring>
+                ******* ERROR *******
+            </xsl:non-matching-substring>
+        </xsl:analyze-string>
+    </xsl:function>
+    
 </xsl:stylesheet>
