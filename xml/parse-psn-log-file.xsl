@@ -13,7 +13,10 @@
     <xsl:variable name="PSNLogfilename2">HH20100918 T308745085 No Limit Hold'em Freeroll.txt</xsl:variable>
     <xsl:variable name="PSNLogfilename3">HH20100918 T308745157 No Limit Hold'em Freeroll.txt</xsl:variable>
     <xsl:variable name="PSNLogfilename4">HH20101010 T319269255 No Limit Hold'em Freeroll.txt</xsl:variable>
-    <xsl:variable name="PSNLogfilename">HH20101016 T321857964 No Limit Hold'em $0.25 + $0.txt</xsl:variable>
+    <xsl:variable name="PSNLogfilename5">HH20101016 T321857964 No Limit Hold'em $0.25 + $0.txt</xsl:variable>
+    <xsl:variable name="PSNLogfilename6">HH20101127 T336060562 No Limit Hold'em 300 + 20.txt</xsl:variable>
+    <xsl:variable name="PSNLogfilename">HH20101227 T346337326 No Limit Hold'em 300 + 20.txt</xsl:variable>
+    <xsl:variable name="PSNLogfilename7">HH20101228 Turais VI - 5-10 - Play Money No Limit Hold'em.txt</xsl:variable>
     
     <xsl:variable name="filename"><xsl:value-of select="concat($PSNLogdirectory, '/', $PSNLogfilename)"/></xsl:variable>
     <xsl:output method="xml" indent="yes"/>
@@ -204,15 +207,36 @@
         <xsl:sequence select="$lines"></xsl:sequence>
     </xsl:function>
     
+    <xsl:function name="pp:gameNumberAndTournamentNumber" as="attribute()*">
+        <xsl:param name="firstHand" as="node()"/>
+        <!-- Tournament
+            PokerStars Game #49812863754: Tournament #308745085, Freeroll  Hold'em No Limit - Level I (200/400) - 2010/09/18 15:30:11 ET -->
+        <!-- Just standard table
+            PokerStars Game #54974132951:  Hold'em No Limit (5/10) - 2010/12/28 10:47:56 ET -->
+        <xsl:analyze-string select="$firstHand"
+            regex="^PokerStars Game #(\d*):( Tournament #(\d*),)?(.*) - (.*)$">
+            <xsl:matching-substring>
+                <xsl:attribute name="gamenum" select="regex-group(1)"></xsl:attribute>
+                <xsl:attribute name="tounamentnum" select="regex-group(3)"></xsl:attribute>
+                <xsl:attribute name="gamename" select="normalize-space(regex-group(4))"></xsl:attribute>
+                <xsl:attribute name="gamestarttime" select="regex-group(5)"></xsl:attribute>
+            </xsl:matching-substring>
+            <xsl:non-matching-substring>
+                <xsl:attribute name="gamenum">******* ERROR *******</xsl:attribute>
+                <xsl:attribute name="gamename">******* ERROR *******</xsl:attribute>
+                <xsl:attribute name="gamestarttime">******* ERROR *******</xsl:attribute>
+            </xsl:non-matching-substring>
+        </xsl:analyze-string>
+        
+    </xsl:function>
+    
     <xsl:template name="init">
         <xsl:apply-templates select="pp:getLogLines($filename)"/>
     </xsl:template>
     
     <xsl:template match="lines">
         <hands>
-        <!-- TODO:  Would be nice to take the first hand element and use this to get the title of the game
-            PokerStars Game #49812863754: Tournament #308745085, Freeroll  Hold'em No Limit - Level I (200/400) - 2010/09/18 15:30:11 ET
-        -->
+        <xsl:copy-of select="pp:gameNumberAndTournamentNumber(./hand[1])"/>
         <xsl:for-each select="hand">
             <hand>
                 <xsl:copy-of select="pp:buttonPositionTableSizeAndCurrentChipCountAndTime(.)"/>
