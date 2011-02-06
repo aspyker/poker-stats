@@ -1,0 +1,8 @@
+{
+    "identifier" : "gameid",
+    "label" : "gamename",
+    "items" : [
+        {"gamename" : "300+20 Hold'em No Limit - Level I (10/20)", "gameid" : "54945304373"},
+        {"gamename" : "Hold'em No Limit (5/10)", "gameid" : "54974132951"}
+    ]
+}

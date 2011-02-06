@@ -1,0 +1,267 @@
+<!DOCTYPE html SYSTEM "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+    <head>
+        <title>Hand Summaries</title>
+        <script src="http://ajax.googleapis.com/ajax/libs/dojo/1.5/dojo/dojo.xd.js" type="text/javascript" djConfig="parseOnLoad: true">></script>
+        <script type="text/javascript">
+            dojo.require("dijit.form.FilteringSelect");
+            dojo.require("dojo.data.ItemFileReadStore");
+            dojo.require("dojox.charting.widget.Chart2D");
+            dojo.require("dojox.charting.DataChart");
+            dojo.require("dojox.charting.widget.Legend");
+            dojo.require("dojox.charting.themes.PlotKit.green");
+
+            // Global reference for chart object.
+            chart = null;
+
+            // Create chart for the first time. Returns chart object.
+            function createChart() {
+                var chart = new dojox.charting.Chart2D('graph');
+                        
+                chart.addPlot("default", {
+                    //type of chart
+                    type: "Markers",
+                    //show markers at number points?
+                    markers: true,
+                    //show lines?
+                    lines: true,
+                     //fill in areas?
+                        areas: true,
+                        //offset position for label
+                        labelOffset: -30,
+                        //add shadows to lines
+                        shadows: { dx:2, dy:2, dw:2 }
+                    });
+                    chart.addAxis("x");
+                    chart.addAxis("y", {
+                        fixLower: "major",
+                        fixUpper: "major",
+                        includeZero: true,
+                        vertical:true
+                    });
+                    var magnify = new dojox.charting.action2d.Magnify(chart, "default");
+                    var tip = new dojox.charting.action2d.Tooltip(chart, "default");
+                    chart.connectToPlot("default", graphClicked);
+                    return chart;
+            };
+
+            // Called when drop down changes value, fire off XHR request to retrieve
+            // this game's data.
+            function gameChanged(event) {
+                var theUrl = "game-chipCounts.xql?gamenum=" + event;
+                // XHR calls return a deferred object, which makes handling asynchronous 
+                // programming much easier. http://docs.dojocampus.org/dojo/Deferred
+                var d = dojo.xhrGet({
+                    url : theUrl,
+                    handleAs : "json"
+                });
+
+                // Add success and failure callbacks.
+                d.then(function(response, ioArgs) {
+                        // eXistDB returns all values escapted with "'s, so convert back to numbers
+                        // Use dojo.map to run transform function over array contents,
+                        // running a new value.
+                        var chipCounts = dojo.map(response.items, function (item) {
+                            // Always include radix to prevent problems when "01" is 
+                            // treated as octal.
+                            return parseInt(item, 10);
+                        });
+
+                        chart.removeSeries("Chip Count");
+                        chart.addSeries("Chip Count", chipCounts, { 
+                            stroke: "blue", 
+                            fill: "lightblue" 
+                        });
+                        chart.render();
+
+                        // Ordered list of response parameters in table row order
+                        var rowsHandKeys = ["startingChipCount", "endingChipCount", "numberOfHands", 
+                            "numberOfAllIns", "percentOfFlopsSeen", "percentOfFlopsSeenWhenInBigBlind", 
+                            "percentOfFlopsSeenWhenInSmallBlind", "percentOfFlopsSeenWhenInOtherPositions"];
+
+                        // Find ordered list of last table cell per row 
+                        var tableRows = dojo.query("#gameDetails td:last-child");
+
+                        // Iterate through keys, finding associated value and setting in the cell
+                        for(var i = 0; i < rowsHandKeys.length; i++) {
+                            tableRows.at(i).attr("innerHTML", response[rowsHandKeys[i]]);
+                        }
+
+                    },
+                    function(response, ioArgs) {
+                        console.log("An error occurrerd.", response, ioArgs);
+                    });
+            };
+
+            function createCardImgTag(card) {
+                return "<img src='cardimages/" + card + ".png'/>";
+            };
+            
+            function createCardImgTags(cards) {
+                var ret = '';
+                for (ii = 0; ii < cards.length; ii++) {
+                    ret = ret + createCardImgTag(cards[ii]);
+                }
+                return ret;
+            };
+            
+            // Event has been generated by the graph, check for click event and fire off XHR.
+            function graphClicked(event) {
+                // Always use '===' equality checks, otherwise unpredictable 
+                // results as JS will type cast automatically.
+                if (event.type === "onclick") {
+                    var handnum = event.index;
+
+                    // Retrieve currently selected game number from widget
+                    var gamenum = dijit.byId("game").get("value");
+
+                    var theUrl = "/exist/poker/hand.xql?gamenum=" + gamenum + "&handnum=" + handnum;
+
+                    var d = dojo.xhrGet({
+                        url : theUrl,
+                        handleAs : "json"
+                    });
+
+                    d.then(function(response, ioArgs) {
+                            // inspect the response and ioArgs...
+                            console.log(response, ioArgs);
+                            var startingHand = dojo.query("#startingHand");
+                            startingHand[0].innerHTML = createCardImgTags(response.hand.hole.cards.card);
+                            if (response.hand.flop) {
+                                var flop = dojo.query("#flop");
+                                flop[0].innerHTML = createCardImgTags(response.hand.flop.cards.card);
+                            }
+                            if (response.hand.turn) {
+                                var turn = dojo.query("#turn");
+                                turn[0].innerHTML = createCardImgTags(response.hand.turn.cards.card);
+                            }
+                            if (response.hand.river) {
+                                var river = dojo.query("#river");
+                                river[0].innerHTML = createCardImgTags(response.hand.river.cards.card);
+                            }
+                    },
+                    function(resonse, ioArgs) {
+                        console.log("An error occurrerd.", response, ioArgs);
+                    });
+                }
+            };
+            
+            // dojo.addOnLoad has been renamed dojo.ready in 1.5 and will
+            // be removed in 1.6.
+            dojo.ready(function(){
+                    // Let's create the store and associate it with our filtering 
+                    // select.
+                    var gameStore = new dojo.data.ItemFileReadStore({
+                        url: "allGames.xql"
+                    });
+
+                    // Find Dojo widget using unique id inherited from
+                    // HTML element.
+                    var gameSelect = dijit.byId("game");
+
+                    // Set store attribute on widget
+                    gameSelect.set("store", gameStore);
+
+                    // Connect up event handler before setting default value so when 
+                    // initial graph will always be displayed.
+                    dojo.connect(gameSelect, "onChange", this, gameChanged);
+
+                    // To set a default value to display initially,
+                    // we would set the attribute "value" on the widget.
+                    // Assuming we don't know the first game id, let's 
+                    // just fetch it from the store and set it dynamically.
+                    gameStore.fetch({
+                        onComplete: function (items) {
+                            // Sanity check we have some data....
+                            if (items) {
+                                var itemId = gameStore.getIdentity(items[0]);
+                                gameSelect.set("value", itemId);
+                            }
+                        }
+                    });
+
+                    // Finally, create initial chart but don't render
+                    // yet as we have no data to render.
+                    chart = createChart();
+                });
+
+        </script>
+        <link rel="stylesheet" type="text/css" href="http://ajax.googleapis.com/ajax/libs/dojo/1.5/dijit/themes/claro/claro.css"/>
+    </head>
+    <body class="claro">
+        <!-- We'll just instantiate the list using the dojo parser and connect up the store dynamically
+            at run time -->
+        <table>
+            <tr>
+            <td>Pick a Game:  </td>
+            <td>
+                <input dojoType="dijit.form.FilteringSelect" id="game" name="game" searchAttr="gamename"/>
+            </td>
+            </tr>
+        </table>
+
+        <hr></hr>
+        
+        <table>
+        <tr>
+            <td>
+                <div>Chips</div>
+            </td>
+            <td>
+                <div id="graph" style="width: 800px; height: 250px;"></div>
+            </td>
+        </tr>
+        <tr>
+            <td></td>
+            <td><div style="text-align: center">Hands</div></td>
+        </tr>
+        </table>
+
+        <hr></hr>
+        
+        <!-- Use a table to hold data -->
+        <table id="gameDetails">
+            <tr>
+                <td>Starting Chip Count</td><td></td>
+            </tr>
+            <tr>
+                <td>Ending Chip Count</td><td></td>
+            </tr>
+            <tr>
+                <td>Number Of Hands</td><td></td>
+            </tr>
+            <tr>
+                <td>Number Of All Ins</td><td></td>
+            </tr>
+            <tr>
+                <td>Percentage Of Flops Seen (total)</td><td></td>
+            </tr>
+            <tr>
+                <td>Percentage Of Flops Seen (small blind)</td><td></td>
+            </tr>
+            <tr>
+                <td>Percentage Of Flops Seen (big blind)</td><td></td>
+            </tr>
+            <tr>
+                <td>Percentage Of Flops Seen (other positions)</td><td></td>
+            </tr>
+        </table>
+        
+        <hr></hr>
+        
+        <table id="handDetails">
+            <tr>
+                <td>Starting Hand</td><td id="startingHand"></td>
+            </tr>
+            <tr>
+                <td>Flop</td><td id="flop"></td>
+            </tr>
+            <tr>
+                <td>Turn</td><td id="turn"></td>
+            </tr>
+            <tr>
+                <td>River</td><td id="river"></td>
+            </tr>
+        </table>
+    </body>
+</html>

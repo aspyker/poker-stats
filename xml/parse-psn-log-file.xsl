@@ -4,6 +4,8 @@
     xmlns:xs="http://www.w3.org/2001/XMLSchema"
     exclude-result-prefixes="xsl pp xs"
     version="2.0">
+    
+    <xsl:include href="processChips.xsl"/>
 
     <xsl:variable name="PSNUsername">TheSpikerMan</xsl:variable>
     
@@ -15,8 +17,12 @@
     <xsl:variable name="PSNLogfilename4">HH20101010 T319269255 No Limit Hold'em Freeroll.txt</xsl:variable>
     <xsl:variable name="PSNLogfilename5">HH20101016 T321857964 No Limit Hold'em $0.25 + $0.txt</xsl:variable>
     <xsl:variable name="PSNLogfilename6">HH20101127 T336060562 No Limit Hold'em 300 + 20.txt</xsl:variable>
-    <xsl:variable name="PSNLogfilename">HH20101227 T346337326 No Limit Hold'em 300 + 20.txt</xsl:variable>
     <xsl:variable name="PSNLogfilename7">HH20101228 Turais VI - 5-10 - Play Money No Limit Hold'em.txt</xsl:variable>
+    <xsl:variable name="PSNLogfilename8">HH20101208 T339814488 No Limit Hold'em 300 + 20.txt</xsl:variable>
+    <xsl:variable name="PSNLogfilename9">HH20101231 T347727094 No Limit Hold'em 300 + 20.txt</xsl:variable>
+    <xsl:variable name="PSNLogfilename10">HH20110108 T350802269 No Limit Hold'em 300 + 20.txt</xsl:variable>
+    <xsl:variable name="PSNLogfilename11">HH20101227 T346337326 No Limit Hold'em 300 + 20.txt</xsl:variable>
+    <xsl:variable name="PSNLogfilename">HH20110131 T359467914 No Limit Hold'em 300 + 20.txt</xsl:variable>
     
     <xsl:variable name="filename"><xsl:value-of select="concat($PSNLogdirectory, '/', $PSNLogfilename)"/></xsl:variable>
     <xsl:output method="xml" indent="yes"/>
@@ -125,6 +131,11 @@
                     <xsl:value-of select="."/>
                     </smallblind>
                 </xsl:when>
+                <xsl:when test="contains(., ': posts the ante')">
+                    <ante>
+                    <xsl:value-of select="."/>
+                    </ante>
+                </xsl:when>
                 <xsl:when test="starts-with(., '*** FLOP ***')">
                     <flop>
                     <xsl:value-of select="."/>
@@ -169,6 +180,11 @@
                     <xsl:value-of select="."/>
                     </tableSummary>
                 </xsl:when>
+                <xsl:when test="starts-with(., 'Uncalled bet') and contains (., 'returned to ')">
+                    <uncalledBet>
+                    <xsl:value-of select="."/>
+                    </uncalledBet>
+                </xsl:when>
                 <!-- Board summary  -->
                 <xsl:when test="starts-with(., 'Board [')"/>
                 <!-- so far not doing anything with other seat summaries -->
@@ -181,8 +197,6 @@
                 <xsl:when test="starts-with(., 'Seat ') and contains(., ' folded before ')"/>
                 <!-- so far not doing anything lost summaries -->
                 <xsl:when test="starts-with(., 'Seat ') and contains(., ' folded on the ')"/>
-                <!-- so far not doing anything with the antes -->
-                <xsl:when test="contains (., ': posts the ante ')"/>
                 <!-- handled in dealt to -->
                 <xsl:when test=". = '*** HOLE CARDS ***'"/> 
                 <xsl:when test=". = '*** SHOW DOWN ***'"/>
@@ -195,10 +209,10 @@
                 <xsl:when test="contains(., 'said, ')"/>
                 <xsl:when test="contains(., 'doesn''t show hand')"/>
                 <xsl:when test="contains(., 'Total pot ')"/>
-                <xsl:when test="contains(., ' returned to ')"/>
+                <xsl:when test="contains(., 'finished the tournament in ')"/>
                 <xsl:when test=". = ''"/>
                 <xsl:otherwise>
-                    <xsl:message><xsl:value-of select="."/></xsl:message>
+                    <xsl:message>DID NOT PROCESS LINE - <xsl:value-of select="."/></xsl:message>
                 </xsl:otherwise>
             </xsl:choose>
             </xsl:for-each>
@@ -231,27 +245,36 @@
     </xsl:function>
     
     <xsl:template name="init">
-        <xsl:apply-templates select="pp:getLogLines($filename)"/>
+        <xsl:variable name="lines" select="pp:getLogLines($filename)"/>
+        <xsl:apply-templates select="$lines"/>
     </xsl:template>
     
     <xsl:template match="lines">
         <hands>
         <xsl:copy-of select="pp:gameNumberAndTournamentNumber(./hand[1])"/>
         <xsl:for-each select="hand">
-            <hand>
-                <xsl:copy-of select="pp:buttonPositionTableSizeAndCurrentChipCountAndTime(.)"/>
-<!--                
-                <summary><xsl:value-of select="."/></summary>
--->                
-                <xsl:apply-templates select="
-                    if (not(./following-sibling::hand[1])) then
-                        following-sibling::*
-                    else
-                        following-sibling::*[. &lt;&lt; current()/following-sibling::hand[1]]
-                "/>
-            </hand>
+            <xsl:variable name="thehand">
+                <hand>
+                    <xsl:copy-of select="pp:buttonPositionTableSizeAndCurrentChipCountAndTime(.)"/>
+                    <xsl:apply-templates select="
+                        if (not(./following-sibling::hand[1])) then
+                            following-sibling::*
+                        else
+                            following-sibling::*[. &lt;&lt; current()/following-sibling::hand[1]]
+                        "/>
+                </hand>
+            </xsl:variable>
+            <xsl:apply-templates select="$thehand"/>
         </xsl:for-each>
         </hands>
+    </xsl:template>
+    
+    <xsl:template match="hand" name="hand">
+        <hand>
+        <xsl:copy-of select="@*"/>
+        <xsl:copy-of select="node()"/>
+        <xsl:copy-of select="pp:seatSummaryAfterHand2(.)"/>
+        </hand>
     </xsl:template>
 
     <xsl:template match="tableSummary">
@@ -270,7 +293,7 @@
                         <xsl:when test="empty($lastSeatSummaryOfHand)">
                             <xsl:copy-of select="pp:writeSeatSummary(.)"/>
                         </xsl:when>
-                        <xsl:when test="current() &lt;&lt; $lastSeatSummaryOfHand">
+                        <xsl:when test="(current() &lt;&lt; $lastSeatSummaryOfHand) or (current() is $lastSeatSummaryOfHand)">
                             <xsl:copy-of select="pp:writeSeatSummary(.)"/>
                         </xsl:when>
                         <xsl:otherwise/><!-- current() >> $lastSeatSummaryOfHand -->
@@ -465,6 +488,29 @@
             </xsl:analyze-string>
         </smallblind>
     </xsl:template>
+
+    <xsl:template match="ante">
+        <xsl:variable name="action" select="."/>
+        <ante>
+            <xsl:analyze-string select="."
+                regex="^(.*): posts the ante (\d*)\s*(and is all-in)?">
+                <xsl:matching-substring>
+                    <xsl:variable name="person" select="regex-group(1)"/>
+                    <xsl:variable name="ammount" select="regex-group(2)"/>
+                    <xsl:variable name="all-in" select="regex-group(3)"/>
+                    <xsl:if test="$person = $PSNUsername">
+                        <xsl:attribute name="self">true</xsl:attribute>
+                    </xsl:if>
+                    <xsl:attribute name="seatNum" select="pp:seatNumber($person, $action)"/> 
+                    <xsl:attribute name="ammount"><xsl:value-of select="$ammount"/></xsl:attribute>
+                    <xsl:if test="$all-in">
+                        <xsl:attribute name="all-in">true</xsl:attribute>
+                    </xsl:if>
+                </xsl:matching-substring>
+                <xsl:non-matching-substring>******* ERROR *******</xsl:non-matching-substring>
+            </xsl:analyze-string>
+        </ante>
+    </xsl:template>
     
     <xsl:template match="bigblind">
         <xsl:variable name="action" select="."/>
@@ -537,18 +583,20 @@
         <xsl:choose>
             <xsl:when test="contains(., ' collected ')">
                 <xsl:analyze-string select="."
-                    regex="Seat \d: .* collected \((\d*)\).*">
+                    regex="Seat (\d): .* collected \((\d*)\).*">
                     <xsl:matching-substring>
-                        <xsl:attribute name="total"><xsl:value-of select="regex-group(1)"/></xsl:attribute>
+                        <xsl:attribute name="seatNum"><xsl:value-of select="regex-group(1)"/></xsl:attribute>
+                        <xsl:attribute name="total"><xsl:value-of select="regex-group(2)"/></xsl:attribute>
                     </xsl:matching-substring>
                     <xsl:non-matching-substring>******* ERROR *******</xsl:non-matching-substring>
                 </xsl:analyze-string>
             </xsl:when>
             <xsl:when test="contains(., ' and won ')">
                 <xsl:analyze-string select="."
-                    regex="Seat \d: .* and won \((\d*)\).*">
+                    regex="Seat (\d): .* and won \((\d*)\).*">
                     <xsl:matching-substring>
-                        <xsl:attribute name="total"><xsl:value-of select="regex-group(1)"/></xsl:attribute>
+                        <xsl:attribute name="seatNum"><xsl:value-of select="regex-group(1)"/></xsl:attribute>
+                        <xsl:attribute name="total"><xsl:value-of select="regex-group(2)"/></xsl:attribute>
                     </xsl:matching-substring>
                     <xsl:non-matching-substring>******* ERROR *******</xsl:non-matching-substring>
                 </xsl:analyze-string>
@@ -558,6 +606,24 @@
             </xsl:otherwise>
         </xsl:choose>
         </winner>
+    </xsl:template>
+    
+    <xsl:template match="uncalledBet">
+        <xsl:variable name="action" select="."/>
+        <uncalledBet>
+            <xsl:analyze-string select="."
+                regex="^Uncalled bet \((\d*)\) returned to (.*)$">
+                <xsl:matching-substring>
+                    <xsl:attribute name="ammount" select="concat('-', regex-group(1))"/>
+                    <xsl:variable name="better" select="regex-group(2)"/>
+                    <xsl:if test="$better = $PSNUsername">
+                        <xsl:attribute name="self">true</xsl:attribute>
+                    </xsl:if>
+                    <xsl:attribute name="seatNum" select="pp:seatNumber($better, $action)"/> 
+                </xsl:matching-substring>
+                <xsl:non-matching-substring>******* ERROR *******</xsl:non-matching-substring>
+            </xsl:analyze-string>
+        </uncalledBet>
     </xsl:template>
     
     <xsl:function name="pp:seatNumber" as="xs:string">
